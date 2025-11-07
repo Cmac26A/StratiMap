@@ -109,33 +109,38 @@ with col_main:
     z_value = st.slider("Select Elevation (m)", min_value=int(region_bounds["alt"][0]), max_value=int(region_bounds["alt"][1]), step=10)
 
     if st.button("Generate Horizontal Section"):
-        slice_points = slice_at_z(grid, z_value, units, lat0, lon0)
-        plot_horizontal_section(slice_points, lat0, lon0, units)
+        st.session_state.slice_points = slice_at_z(grid, z_value, units, lat0, lon0)
+        st.session_state.z_value = z_value
 
 with col_borehole:
     st.subheader("Artificial Borehole Tool")
+
     lat_min, lat_max = region_bounds["lat"]
     lon_min, lon_max = region_bounds["lon"]
 
-    bore_lat = st.slider(
-        "Borehole Latitude",
-        min_value=float(lat_min),
-        max_value=float(lat_max),
-        value=float((lat_min + lat_max) / 2),
-        step=1e-6,
-        format="%.6f"
-    )
-
-    bore_lon = st.slider(
-        "Borehole Longitude",
-        min_value=float(lon_min),
-        max_value=float(lon_max),
-        value=float((lon_min + lon_max) / 2),
-        step=1e-6,
-        format="%.6f"
-    )
+    bore_lat = st.slider("Borehole Latitude", min_value=float(lat_min), max_value=float(lat_max),
+                         value=float((lat_min + lat_max) / 2), step=1e-6, format="%.6f")
+    bore_lon = st.slider("Borehole Longitude", min_value=float(lon_min), max_value=float(lon_max),
+                         value=float((lon_min + lon_max) / 2), step=1e-6, format="%.6f")
 
     if st.button("Generate Borehole Log"):
-        units = [create_unit(u, region_bounds) for u in st.session_state.unit_manager.get_units()]
-        borehole_log = generate_borehole_log(bore_lat, bore_lon, region_bounds, units)
-        plot_borehole_log(borehole_log, units)
+        st.session_state.borehole_log = generate_borehole_log(bore_lat, bore_lon, region_bounds, units)
+        st.session_state.bore_lat = bore_lat
+        st.session_state.bore_lon = bore_lon
+
+# 🔁 Render both plots if data is available
+with col_main:
+    if "slice_points" in st.session_state:
+        plot_horizontal_section(
+            st.session_state.slice_points,
+            lat0, lon0, units,
+            borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
+        )
+
+with col_borehole:
+    if "borehole_log" in st.session_state:
+        plot_borehole_log(
+            st.session_state.borehole_log,
+            units,
+            section_marker=st.session_state.get("z_value")
+        )

@@ -23,17 +23,22 @@ def generate_borehole_log(lat, lon, region_bounds, units, z_step=10):
 
     return log
 
-def plot_borehole_log(log, units):
-    """
-    Renders a vertical borehole log showing unit membership by elevation.
-    """
+def plot_borehole_log(log, units, section_marker=None):
+    import matplotlib.pyplot as plt
+    import streamlit as st
+    from modules.core.section_utils import get_unit_color_map
+
     name_to_color = get_unit_color_map(units)
     zs = [z for z, _ in log]
     colors = [name_to_color.get(name, "#ffffff") for _, name in log]
 
-    fig, ax = plt.subplots(figsize=(2, 6))
+    fig, ax = plt.subplots(figsize=(1.2, 6))
     for i in range(len(zs) - 1):
         ax.fill_betweenx([zs[i], zs[i+1]], 0, 1, color=colors[i])
+
+    if section_marker is not None:
+        ax.axhline(section_marker, color="purple", linestyle="--", linewidth=2, label="Section Elevation")
+        ax.legend()
 
     ax.set_ylim(min(zs), max(zs))
     ax.set_xlim(0, 1)

@@ -29,8 +29,11 @@ def slice_at_z(grid, z_target, units, lat0, lon0):
             slice_points.append((x, y, unit_name))
     return slice_points
 
+def plot_horizontal_section(slice_points, lat0, lon0, units, borehole_marker=None):
+    import matplotlib.pyplot as plt
+    from modules.geometry.unit_builder import xy_to_latlon
+    from modules.core.section_utils import get_unit_color_map
 
-def plot_horizontal_section(slice_points, lat0, lon0, units):
     name_to_color = get_unit_color_map(units)
     xs, ys, colors = [], [], []
 
@@ -38,12 +41,19 @@ def plot_horizontal_section(slice_points, lat0, lon0, units):
         lat, lon = xy_to_latlon(x, y, lat0, lon0)
         xs.append(lon)
         ys.append(lat)
-        colors.append(name_to_color.get(name, "#ffffff"))  # white for blank
+        colors.append(name_to_color.get(name, "#ffffff"))
 
     fig, ax = plt.subplots(figsize=(8, 6))
-    ax.scatter(xs, ys, c=colors, s=40, edgecolors='none',marker='s')
+    ax.scatter(xs, ys, c=colors, s=100, marker='s', edgecolors='none')
+
+    if borehole_marker:
+        bx, by = borehole_marker
+        ax.scatter(by, bx, color="black", marker="x", s=120, label="Borehole")
+        ax.legend()
+
     ax.set_xlabel("Longitude")
     ax.set_ylabel("Latitude")
     ax.set_title("Horizontal Section")
     ax.grid(True)
     st.pyplot(fig)
+
