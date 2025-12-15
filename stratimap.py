@@ -1,12 +1,10 @@
 import streamlit as st
 import numpy as np
 from modules.ui.ui_controls import get_unit_inputs, render_region_inputs
-from modules.geometry.unit_builder import create_unit
+from modules.geometry.unit_builder import create_unit, latlon_to_xy
 from modules.visualisation.unit_renderer import render_units
 from modules.core.unit_manager import UnitManager
-from modules.ui.topo_controls import get_topo_controls
-from modules.geometry.topo_loader import get_elevation_grid
-from modules.visualisation.topo_renderer import render_contours
+from modules.core.section_utils import resolve_unit_at_point, get_unit_color_map
 from modules.visualisation.section_renderer import generate_grid, slice_at_z, plot_horizontal_section
 from modules.visualisation.borehole_renderer import generate_borehole_log, plot_borehole_log
 
@@ -82,17 +80,6 @@ st.sidebar.markdown("### Saved Units")
 for i, saved in enumerate(saved_units):
     st.sidebar.color_picker(f"{saved['name']}", saved["color"], key=f"color_{i}")
 
-# Topography controls
-spacing, generate = get_topo_controls()
-if generate:
-    with st.spinner("Querying elevation and generating contours..."):
-        topo_data = get_elevation_grid(st.session_state.region_bounds)
-        st.write("Elevation range:",
-                 "min =", np.min(topo_data["elevation"]),
-                 "max =", np.max(topo_data["elevation"]),
-                 "mean =", np.mean(topo_data["elevation"]))
-        render_contours(topo_data, st.session_state.region_bounds, spacing)
-
 # Create layout columns
 col_main, col_borehole = st.columns([3, 1])
 
@@ -112,6 +99,16 @@ with col_main:
         st.session_state.slice_points = slice_at_z(grid, z_value, units, lat0, lon0)
         st.session_state.z_value = z_value
 
+    if "slice_points" in st.session_state:
+        plot_horizontal_section(
+            st.session_state.slice_points,
+            lat0, lon0, units,
+            borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
+        )
+
+
+
+
 with col_borehole:
     st.subheader("Artificial Borehole Tool")
 
@@ -128,19 +125,11 @@ with col_borehole:
         st.session_state.bore_lat = bore_lat
         st.session_state.bore_lon = bore_lon
 
-# 🔁 Render both plots if data is available
-with col_main:
-    if "slice_points" in st.session_state:
-        plot_horizontal_section(
-            st.session_state.slice_points,
-            lat0, lon0, units,
-            borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
-        )
-
-with col_borehole:
     if "borehole_log" in st.session_state:
         plot_borehole_log(
             st.session_state.borehole_log,
             units,
             section_marker=st.session_state.get("z_value")
         )
+
+
