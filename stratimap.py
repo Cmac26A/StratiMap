@@ -269,3 +269,21 @@ if st.button("Unit intersection with topography"):
     # Show combined figure
     st.pyplot(fig)
 
+
+st.markdown("---")
+st.markdown(
+    """
+    "## Instructions
+
+    StratiMap is a tool currently capable of forward modelling the trace of geological units on topography maps. To create your own model, follow these steps:
+    1. **Define Region Bounds**: Use the region input controls to set the latitude, longitude, and altitude bounds for your area of interest.
+    2. **Input Geological Units**: In the sidebar, select lithology, color and structural parameters for each unit and then save your units.
+    3. **Section and Borehole tool**: Use these tools to view a horizontal slice or generate a synthetic borehole log through your model.
+    4. **Fetch Topography**: Use the 'Fetch Topography' button to download DEM data for your region.
+    5. **Show Existing Topography**: Load and visualize the DEM data as contours.
+    6. **Unit Intersection with Topography**: Generate a geological, showing your inputted units intersecting the topography.
+
+    Compare your model an existing geological map and try your best to reproduce the geology of the area.
+    
+    
+    """)
