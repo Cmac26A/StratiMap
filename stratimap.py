@@ -1,6 +1,9 @@
 import streamlit as st
 import numpy as np
+import os 
 
+from modules.visualisation.section_renderer import slice_from_dem
+from modules.core.topo_loader import fetch_dem, load_dem, plot_dem_contour
 from modules.ui.ui_controls import get_unit_inputs, render_region_inputs
 from modules.geometry.unit_builder import create_unit
 from modules.visualisation.unit_renderer import render_units
@@ -8,6 +11,7 @@ from modules.core.unit_manager import UnitManager
 from modules.core.section_utils import resolve_unit_at_point, get_unit_color_map
 from modules.visualisation.section_renderer import generate_grid, slice_at_z, plot_horizontal_section
 from modules.visualisation.borehole_renderer import generate_borehole_log, plot_borehole_log
+
 
 # -------------------------------
 # Session state initialization
@@ -125,11 +129,13 @@ with col_main:
         st.session_state.z_value = z_value
 
     if "slice_points" in st.session_state:
-        plot_horizontal_section(
+        fig, ax = plot_horizontal_section(
             st.session_state.slice_points,
             lat0, lon0, units,
             borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
         )
+        st.pyplot(fig)   # show here
+        
 
 # -------------------------------
 # Borehole column
@@ -164,3 +170,102 @@ with col_borehole:
             units,
             section_marker=st.session_state.get("z_value")
         )
+
+API_KEY = "22010917bbd6f57d868e52ea3c8b4dbf"
+# Sidebar inputs → dynamic region bounds
+
+
+
+
+DEM_FILE = "dem.tif"
+
+# Button 1: Fetch DEM
+if st.button("Fetch Topography"):
+    try:
+        dem_file = fetch_dem(region_bounds, API_KEY, demtype="SRTMGL1", filename=DEM_FILE)
+        st.session_state["dem_file"] = dem_file
+        st.success(f"DEM fetched and saved to {dem_file}")
+    except Exception as e:
+        st.error(f"Failed to fetch DEM: {e}")
+
+# Button 2: Generate Topography
+if st.button("Show Existing Topography"):
+    if os.path.exists(DEM_FILE):
+        lons, lats, dem = load_dem(DEM_FILE)
+        st.session_state["lons"] = lons
+        st.session_state["lats"] = lats
+        st.session_state["dem"] = dem
+
+        fig = plot_dem_contour(lons, lats, dem)
+        st.plotly_chart(fig, use_container_width=True)
+    else:
+        st.warning("No DEM file found. Please fetch topography first.")
+
+# Button 3: Generate DEM Section
+if st.button("Unit intersection with topography"):
+    import numpy as np
+    import rasterio
+
+    # Check if DEM is already in session_state
+    if "lons" in st.session_state and "lats" in st.session_state and "dem" in st.session_state:
+        lons = st.session_state["lons"]
+        lats = st.session_state["lats"]
+        dem = st.session_state["dem"]
+
+    else:
+        # Fallback: load DEM from disk
+        DEM_FILE = "dem.tif"   # adjust to your filename/path
+        with rasterio.open(DEM_FILE) as src:
+            dem = src.read(1)
+            lons = np.linspace(src.bounds.left, src.bounds.right, src.width)
+            lats = np.linspace(src.bounds.bottom, src.bounds.top, src.height)
+
+        # Store back into session_state for reuse
+        st.session_state["lons"] = lons
+        st.session_state["lats"] = lats
+        st.session_state["dem"] = dem
+        st.info("DEM reloaded from disk.")
+
+    # Build slice points from DEM
+    slice_points_dem = slice_from_dem(lons, lats, dem, units, lat0, lon0)
+    st.session_state["slice_points_dem"] = slice_points_dem
+
+    # Get base horizontal section figure
+    fig, ax = plot_horizontal_section(
+        slice_points_dem,
+        lat0, lon0, units,
+        borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
+    )
+
+
+    # Overlay DEM contours at multiples of 100 m
+    max_elev = np.nanmax(dem)
+    contour_levels = np.arange(0, max_elev + 100, 100)  # 0, 100, 200, ...
+    contours = ax.contour(
+        lons, lats, dem,
+        levels=contour_levels,
+        colors="black",
+        linewidths=0.5,
+        alpha=0.6
+    )
+
+
+    # Label the contours
+    ax.clabel(
+        contours,
+        inline=True,          # labels sit nicely on the line
+        fontsize=8,           # adjust text size
+        fmt="%d m"            # format labels, e.g. "100 m"
+    )
+
+    lat_min, lat_max = region_bounds["lat"]
+    lon_min, lon_max = region_bounds["lon"]
+
+    ax.autoscale(False)  # lock limits
+    ax.set_xlim(lon_min, lon_max)
+    ax.set_ylim(lat_min, lat_max)
+    ax.set_title("Forward modelled geological map")
+    
+    # Show combined figure
+    st.pyplot(fig)
+

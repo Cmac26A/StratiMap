@@ -8,7 +8,7 @@ from modules.geometry.unit_builder import latlon_to_xy, xy_to_latlon
 
 EARTH_RADIUS = 6371000  # meters
 
-def generate_grid(region_bounds, z_step=10, x_points=100, y_points=100):
+def generate_grid(region_bounds, z_step=10, x_points=200, y_points=200):
     lat0 = np.mean(region_bounds["lat"])
     lon0 = np.mean(region_bounds["lon"])
     x_min, y_min = latlon_to_xy(region_bounds["lat"][0], region_bounds["lon"][0], lat0, lon0)
@@ -29,6 +29,21 @@ def slice_at_z(grid, z_target, units, lat0, lon0):
             slice_points.append((x, y, unit_name))
     return slice_points
 
+
+def slice_from_dem(lons, lats, dem, units, lat0, lon0):
+    """
+    Build slice points exactly like slice_at_z, but z comes from DEM grid.
+    """
+    slice_points = []
+    for i, lat in enumerate(lats):
+        for j, lon in enumerate(lons):
+            x, y = latlon_to_xy(lat, lon, lat0, lon0)
+            z = dem[i, j]
+            unit_name = resolve_unit_at_point(x, y, z, units, lat0, lon0)
+            slice_points.append((x, y, unit_name))
+    return slice_points
+
+
 def plot_horizontal_section(slice_points, lat0, lon0, units, borehole_marker=None):
     import matplotlib.pyplot as plt
     from modules.geometry.unit_builder import xy_to_latlon
@@ -43,7 +58,7 @@ def plot_horizontal_section(slice_points, lat0, lon0, units, borehole_marker=Non
         ys.append(lat)
         colors.append(name_to_color.get(name, "#ffffff"))
 
-    fig, ax = plt.subplots(figsize=(8, 6))
+    fig, ax = plt.subplots(figsize=(8, 8))
     ax.scatter(xs, ys, c=colors, s=100, marker='s', edgecolors='none')
 
     if borehole_marker:
@@ -55,5 +70,6 @@ def plot_horizontal_section(slice_points, lat0, lon0, units, borehole_marker=Non
     ax.set_ylabel("Latitude")
     ax.set_title("Horizontal Section")
     ax.grid(True)
-    st.pyplot(fig)
+    
+    return fig, ax
 
