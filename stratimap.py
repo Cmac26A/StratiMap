@@ -271,11 +271,9 @@ if st.button("Unit intersection with topography"):
 
 
 st.markdown("---")
-
+st.subheader("Instructions")
 st.markdown(
     """
-    Instructions:
-    
     StratiMap is a tool currently capable of forward modelling the trace of geological units on topography maps. To create your own model, follow these steps:
     1. **Define Region Bounds**: Use the region input controls to set the latitude, longitude, and altitude bounds for your area of interest.
     2. **Input Geological Units**: In the sidebar, select lithology, color and structural parameters for each unit and then save your units.
@@ -285,6 +283,4 @@ st.markdown(
     6. **Unit Intersection with Topography**: Generate a geological, showing your inputted units intersecting the topography.
 
     Compare your model an existing geological map and try your best to reproduce the geology of the area.
-    
-    
     """)
