@@ -271,7 +271,7 @@ if st.button("Unit intersection with topography"):
 
 
 st.markdown("---")
-st.subheading("Instruction") 
+
 st.markdown(
     """
     
