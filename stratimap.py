@@ -31,9 +31,7 @@ st.markdown("""
     section[data-testid="stSidebar"] *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
         color: #595959 !important;
     }
-        
-
-
+   
             
     /* HEADINGS — stable selectors that never change */
     h1, h2, h3, h4, h5, h6,
@@ -150,12 +148,13 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
-intro, motivation = st.columns(2)
+intro, motivation, region = st.columns([1.5,1.5,1])
 with intro:
     st.subheader("Introduction")
     st.markdown("Traditional subsurface interpretation from geological maps relies on geologists constructing cross sections inferred from the traces of units on surface topography.") 
     st.markdown("These methods require expertise, take time, and remain inherently subjective. Cross sections also provide only partial insight: they reveal structure along specific lines but do not form a continuous 3D understanding of the subsurface.")
     st.markdown("With vast archives of 2D geological maps already available, the challenge is how to extract consistent 3D structure from surface observations alone.")
+    st.image("images/theproblem.png", caption="Schematic diagram of project goal: to infer 3D structure from existing 2D maps.")
 with motivation:
     st.subheader("Motivation")
 
@@ -168,15 +167,21 @@ with motivation:
     - Consistency and reproducibility.
 
     These factors cut costs by reducing the need for new invasive sampling, instead aiming to better use the vast extent of existing data.
+
+    The challenge is to develop novel machine learning algorithms capable of inferring 3D models from imperfect maps, since geological maps are subjective and rarely represent the true subsurface structure
+    
+    Furthermore, integrating borehole data, both existing and new samples will allow the 3d model to be further constrained, with boreholes altering the model weights.             
     """)
-
-st.subheader("Region bounds")
-
+with region:
+    st.subheader("Region bounds")
+    st.markdown(""" The user can choose the bounding coordinates of the region. The default values correspond to a region around Snowdon, Wales, UK. """)
 # -------------------------------
 # Region bounds (Snowdon defaults)
 # -------------------------------
-region_bounds = render_region_inputs()
-st.session_state.region_bounds = region_bounds
+    region_bounds = render_region_inputs()
+    st.session_state.region_bounds = region_bounds
+
+st.markdown("""---""")
 
 # -------------------------------
 # Sidebar: Unit editing and creation
@@ -231,19 +236,116 @@ for i, saved in enumerate(saved_units):
 # -------------------------------
 # Layout columns
 # -------------------------------
-col_main, col_borehole = st.columns([3, 1])
+
 
 # -------------------------------
 # Main column: 3D + horizontal sections
 # -------------------------------
-with col_main:
-    st.subheader("3D Unit Visualisation")
-    render_list = [create_unit(u, st.session_state.region_bounds) for u in st.session_state.unit_manager.get_units()]
-    render_list.append(unit_preview)
-    render_units(render_list, st.session_state.region_bounds)
+
+
+
+with st.container():
+
+    col_main, col_borehole = st.columns(2)
+
+    with col_main:
+        st.subheader("          3D Unit Visualisation")
+
+        text, graphic = st.columns(2)
+        with text:
+            st.markdown("""
+            Units added to the side bar are rendered here in a 3d model. 
+            This enables visual verification of the orientation and position of units in space.
+            """)
+        with graphic:
+            st.image(
+                "images/3dsample.png",
+                caption="Previous rendering of four conformable units with two cross-cutting dykes."
+            )
+
+        render_list = [
+            create_unit(u, st.session_state.region_bounds)
+            for u in st.session_state.unit_manager.get_units()
+        ]
+        render_list.append(unit_preview)
+        render_units(render_list, st.session_state.region_bounds)
+
+    with col_borehole:
+
+        units = [create_unit(u, st.session_state.region_bounds) for u in saved_units]
+        st.subheader("Artificial Borehole Tool")
+        description, generate = st.columns(2)
+
+
+        
+
+        
+
+        lat_min, lat_max = region_bounds["lat"]
+        lon_min, lon_max = region_bounds["lon"]
+
+        with description:
+            st.markdown("""
+                A synthetic borehole can be generated at any latitude and longitude location. This is a powerful tool to estimate lithology at depth, without the need for invasive sampling.""")
+            st.image(
+                "images/borehole.png",
+                caption="Sample borehole generated from the 3D model to the left.")
+        with generate:
+            bore_lat = st.slider(
+                "Borehole Latitude",
+                min_value=float(lat_min), max_value=float(lat_max),
+                value=float((lat_min + lat_max) / 2),
+                step=1e-6, format="%.6f"
+            )
+            bore_lon = st.slider(
+                "Borehole Longitude",
+                min_value=float(lon_min), max_value=float(lon_max),
+                value=float((lon_min + lon_max) / 2),
+                step=1e-6, format="%.6f"
+            )
+
+            if st.button("Generate Borehole Log"):
+                st.session_state.borehole_log = generate_borehole_log(
+                    bore_lat, bore_lon, region_bounds, units
+                )
+                st.session_state.bore_lat = bore_lat
+                st.session_state.bore_lon = bore_lon
+
+            if "borehole_log" in st.session_state:
+                plot_borehole_log(
+                    st.session_state.borehole_log,
+                    units,
+                    section_marker=st.session_state.get("z_value")
+            )
+
+st.markdown("""---""")
+
+API_KEY = "22010917bbd6f57d868e52ea3c8b4dbf"
+DEM_FILE = "dem.tif"
+
+horizontal, topo = st.columns(2) 
+
+with horizontal:
+
+
 
     st.subheader("Horizontal Section Viewer")
-    units = [create_unit(u, st.session_state.region_bounds) for u in saved_units]
+
+    text, graphic = st.columns(2)
+    with text: 
+        st.markdown("""
+        A horizontal section at a specified elevation (Z value) can be generated from the 3D model.
+        This provides a geological map view of the subsurface at that elevation, which can be compared to surface observations.
+        """)
+
+    with graphic:
+        st.image(
+            "images/horizontalsection.png",
+            caption="Sample horizontal section at 800 m elevation showing three units."
+        )
+
+
+
     grid, lat0, lon0 = generate_grid(region_bounds)
 
     z_value = st.slider(
@@ -263,146 +365,169 @@ with col_main:
             lat0, lon0, units,
             borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
         )
-        st.pyplot(fig)   # show here
+        st.pyplot(fig)  # show here
         
+with topo:
 
-# -------------------------------
-# Borehole column
-# -------------------------------
-with col_borehole:
-    st.subheader("Artificial Borehole Tool")
+    st.subheader("Import and display topography")
+    st.markdown("""
+    The topography of the selected region can be fetched from the OpenTopography API and displayed.
+    If no topography is fetched, the topography for the default region parameters around Mt. Snowdon can be used without an API fetch.""")
+    # Button 1: Fetch DEM
+    if st.button("Fetch Topography"):
+        try:
+            dem_file = fetch_dem(region_bounds, API_KEY, demtype="SRTMGL1", filename=DEM_FILE)
+            st.session_state["dem_file"] = dem_file
+            st.success(f"DEM fetched and saved to {dem_file}")
+        except Exception as e:
+            st.error(f"Failed to fetch DEM: {e}")
 
-    lat_min, lat_max = region_bounds["lat"]
-    lon_min, lon_max = region_bounds["lon"]
+    # Button 2: Generate Topography
+    if st.button("Show Existing Topography"):
+        if os.path.exists(DEM_FILE):
+            lons, lats, dem = load_dem(DEM_FILE)
+            st.session_state["lons"] = lons
+            st.session_state["lats"] = lats
+            st.session_state["dem"] = dem
 
-    bore_lat = st.slider(
-        "Borehole Latitude",
-        min_value=float(lat_min), max_value=float(lat_max),
-        value=float((lat_min + lat_max) / 2),
-        step=1e-6, format="%.6f"
-    )
-    bore_lon = st.slider(
-        "Borehole Longitude",
-        min_value=float(lon_min), max_value=float(lon_max),
-        value=float((lon_min + lon_max) / 2),
-        step=1e-6, format="%.6f"
-    )
+            fig = plot_dem_contour(lons, lats, dem)
+            st.plotly_chart(fig, use_container_width=True)
+        else:
+            st.warning("No DEM file found. Please fetch topography first.")
 
-    if st.button("Generate Borehole Log"):
-        st.session_state.borehole_log = generate_borehole_log(bore_lat, bore_lon, region_bounds, units)
-        st.session_state.bore_lat = bore_lat
-        st.session_state.bore_lon = bore_lon
+    st.subheader("Synthetic Geological Map")
+    st.markdown("""Generate a synthetic geological map by overlaying unit intersections with topographic contours from the DEM. Each pixel (200x200 resolution) is coloured according to the unit it lies within at that location and elevation.""")
 
-    if "borehole_log" in st.session_state:
-        plot_borehole_log(
-            st.session_state.borehole_log,
-            units,
-            section_marker=st.session_state.get("z_value")
+
+    # Button 3: Generate DEM Section
+    if st.button("Generate Synthetic Geological Map"):
+        import numpy as np
+        import rasterio
+
+        # Check if DEM is already in session_state
+        if "lons" in st.session_state and "lats" in st.session_state and "dem" in st.session_state:
+            lons = st.session_state["lons"]
+            lats = st.session_state["lats"]
+            dem = st.session_state["dem"]
+
+        else:
+            # Fallback: load DEM from disk
+            DEM_FILE = "dem.tif"   # adjust to your filename/path
+            with rasterio.open(DEM_FILE) as src:
+                dem = src.read(1)
+                lons = np.linspace(src.bounds.left, src.bounds.right, src.width)
+                lats = np.linspace(src.bounds.bottom, src.bounds.top, src.height)
+
+            # Store back into session_state for reuse
+            st.session_state["lons"] = lons
+            st.session_state["lats"] = lats
+            st.session_state["dem"] = dem
+            st.info("DEM reloaded from disk.")
+
+        # Build slice points from DEM
+        slice_points_dem = slice_from_dem(lons, lats, dem, units, lat0, lon0)
+        st.session_state["slice_points_dem"] = slice_points_dem
+
+        # Get base horizontal section figure
+        fig, ax = plot_horizontal_section(
+            slice_points_dem,
+            lat0, lon0, units,
+            borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
         )
 
-API_KEY = "22010917bbd6f57d868e52ea3c8b4dbf"
-# Sidebar inputs → dynamic region bounds
+
+        # Overlay DEM contours at multiples of 100 m
+        max_elev = np.nanmax(dem)
+        contour_levels = np.arange(0, max_elev + 100, 100)  # 0, 100, 200, ...
+        contours = ax.contour(
+            lons, lats, dem,
+            levels=contour_levels,
+            colors="black",
+            linewidths=0.5,
+            alpha=0.6
+        )
 
 
+        # Label the contours
+        ax.clabel(
+            contours,
+            inline=True,          # labels sit nicely on the line
+            fontsize=8,           # adjust text size
+            fmt="%d m"            # format labels, e.g. "100 m"
+        )
 
+        lat_min, lat_max = region_bounds["lat"]
+        lon_min, lon_max = region_bounds["lon"]
 
-DEM_FILE = "dem.tif"
-st.subheader("Import and display topography")
+        ax.autoscale(False)  # lock limits
+        ax.set_xlim(lon_min, lon_max)
+        ax.set_ylim(lat_min, lat_max)
+        ax.set_title("Forward modelled geological map")
+        
+        # Show combined figure
+        st.pyplot(fig)
 
-# Button 1: Fetch DEM
-if st.button("Fetch Topography"):
-    try:
-        dem_file = fetch_dem(region_bounds, API_KEY, demtype="SRTMGL1", filename=DEM_FILE)
-        st.session_state["dem_file"] = dem_file
-        st.success(f"DEM fetched and saved to {dem_file}")
-    except Exception as e:
-        st.error(f"Failed to fetch DEM: {e}")
+st.markdown("""---""")
 
-# Button 2: Generate Topography
-if st.button("Show Existing Topography"):
-    if os.path.exists(DEM_FILE):
-        lons, lats, dem = load_dem(DEM_FILE)
-        st.session_state["lons"] = lons
-        st.session_state["lats"] = lats
-        st.session_state["dem"] = dem
+st.subheader("Inverse Modelling (2D-to-3D Visualiation)")
 
-        fig = plot_dem_contour(lons, lats, dem)
-        st.plotly_chart(fig, use_container_width=True)
-    else:
-        st.warning("No DEM file found. Please fetch topography first.")
+text, graphic = st.columns(2) 
 
-st.subheader("Synthetic Geological Map")
-
-# Button 3: Generate DEM Section
-if st.button("Generate Synthetic Geological Map"):
-    import numpy as np
-    import rasterio
-
-    # Check if DEM is already in session_state
-    if "lons" in st.session_state and "lats" in st.session_state and "dem" in st.session_state:
-        lons = st.session_state["lons"]
-        lats = st.session_state["lats"]
-        dem = st.session_state["dem"]
-
-    else:
-        # Fallback: load DEM from disk
-        DEM_FILE = "dem.tif"   # adjust to your filename/path
-        with rasterio.open(DEM_FILE) as src:
-            dem = src.read(1)
-            lons = np.linspace(src.bounds.left, src.bounds.right, src.width)
-            lats = np.linspace(src.bounds.bottom, src.bounds.top, src.height)
-
-        # Store back into session_state for reuse
-        st.session_state["lons"] = lons
-        st.session_state["lats"] = lats
-        st.session_state["dem"] = dem
-        st.info("DEM reloaded from disk.")
-
-    # Build slice points from DEM
-    slice_points_dem = slice_from_dem(lons, lats, dem, units, lat0, lon0)
-    st.session_state["slice_points_dem"] = slice_points_dem
-
-    # Get base horizontal section figure
-    fig, ax = plot_horizontal_section(
-        slice_points_dem,
-        lat0, lon0, units,
-        borehole_marker=(st.session_state.get("bore_lat"), st.session_state.get("bore_lon"))
-    )
-
-
-    # Overlay DEM contours at multiples of 100 m
-    max_elev = np.nanmax(dem)
-    contour_levels = np.arange(0, max_elev + 100, 100)  # 0, 100, 200, ...
-    contours = ax.contour(
-        lons, lats, dem,
-        levels=contour_levels,
-        colors="black",
-        linewidths=0.5,
-        alpha=0.6
-    )
-
-
-    # Label the contours
-    ax.clabel(
-        contours,
-        inline=True,          # labels sit nicely on the line
-        fontsize=8,           # adjust text size
-        fmt="%d m"            # format labels, e.g. "100 m"
-    )
-
-    lat_min, lat_max = region_bounds["lat"]
-    lon_min, lon_max = region_bounds["lon"]
-
-    ax.autoscale(False)  # lock limits
-    ax.set_xlim(lon_min, lon_max)
-    ax.set_ylim(lat_min, lat_max)
-    ax.set_title("Forward modelled geological map")
+with text: 
+    st.markdown("""
+    Inverse modelling aims to recover the geological parameters that produced a given map. Using thousands of synthetic examples, a neural network is trained to learn the relationship between map appearance and the underlying structural geometry.
     
-    # Show combined figure
-    st.pyplot(fig)
+    Each synthetic map is converted into a 2‑channel tensor of shape (2, 200, 200). The first channel stores the lithology category as integer labels, capturing the geometry and identity of each unit. The second channel stores the DEM elevation, providing the topographic context that shapes how units intersect the surface.
+    
+    The network predicts the parameters used to generate the map, including strike, dip, thickness, and unit ordering. By learning how geometry, topography, and unit identity interact, it infers the most likely subsurface structure.
+    """)
 
 
-from modules.visualisation.surface_renderer import build_unit_id_grid, plot_3d_surface
+with graphic:
+    st.image(
+        "images/inverse.png",
+        caption="Schematic of inverse modelling approach using synthetic training data."
+    )
+
+st.markdown("""---""")
+
+future, graphic, author, headshot = st.columns([1,1,1,1])
+
+
+with future:
+    st.subheader("Future work")
+    st.markdown(""" 
+    The current version of StratiMap focuses on developing an inversion algorithm for simple planar geology. However, real geological maps often contain key structural features such as faults and folds. 
+                
+    Without incorporating these into the inversion model, accurate reconstruction of 3D subsurface structure from real maps is not possible. 
+                
+    By introducing faults and folds as input variables and allowing synthetic maps to reflect these complexities, the inversion algorithm will be better equipped to learn from real geological data.
+    """)
+
+with graphic: 
+    st.image(
+        "images/future.png",
+        caption="Future work will incorporate more complex geological structures such as faults and folds into the inversion model."
+    )
+
+with author:
+    st.subheader("About the Author")
+    st.markdown("""
+    I am an MSci Graduate in Earth Sciences from the University of Cambridge, UK. I am currently living in Vancouver, CA. 
+    
+    My research focuses on leveraging machine learning to enhance geological mapping and subsurface modelling, with applications in civil and mining engineering.  
+    
+    I hope to continue to explore the intersection of geoscience and data science through PhD study and/or industry collaboration.
+    """)
+
+with headshot:
+    st.image(
+        "images/headshot.jpeg",
+        caption="Connor McAteer, StratiMap founder and developer."
+    )
+
+
+# from modules.visualisation.surface_renderer import build_unit_id_grid, plot_3d_surface
 
 # if st.button("Show 3D Geological Surface"):
 #    if "dem" in st.session_state and "slice_points_dem" in st.session_state:

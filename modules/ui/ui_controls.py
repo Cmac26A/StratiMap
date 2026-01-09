@@ -49,6 +49,6 @@ def render_region_inputs():
     x_min, y_min = latlon_to_xy(min_y, min_x, ref_lat, ref_lon)
     x_max, y_max = latlon_to_xy(max_y, max_x, ref_lat, ref_lon)
 
-    st.sidebar.markdown(f"**Region size:** ~{abs(x_max-x_min):.0f} m × ~{abs(y_max-y_min):.0f} m")
+    
 
     return {"lat": (min_y, max_y), "lon": (min_x, max_x), "alt": (min_alt, max_alt)}
