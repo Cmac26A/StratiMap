@@ -1,4 +1,108 @@
 import streamlit as st
+
+st.markdown("""
+<style>
+
+    /* GLOBAL OVERRIDE */
+    html, body, [class*="css"] {
+        font-family: 'EB Garamond', serif !important;
+        font-size: 18px !important;   /* <-- ADD THIS HERE */;
+    }
+
+    /* Global body text colour (everything except headings) */
+    html, body, [class*="css"] {
+        color: #595959 !important;
+    }
+
+    /* Markdown text colour */
+    .stMarkdown p,
+    .stMarkdown li,
+    .stMarkdown span,
+    .stMarkdown div {
+        color: #595959 !important;
+    }
+
+    /* Widget labels (selectboxes, sliders, radios, checkboxes, text inputs) */
+    label, .stTextInput label, .stSelectbox label, .stSlider label {
+        color: #595959 !important;
+    }
+
+    /* Sidebar text (but NOT headings, since you already set those to white) */
+    section[data-testid="stSidebar"] *:not(h1):not(h2):not(h3):not(h4):not(h5):not(h6) {
+        color: #595959 !important;
+    }
+        
+
+
+            
+    /* HEADINGS — stable selectors that never change */
+    h1, h2, h3, h4, h5, h6,
+    [data-testid="stMarkdownContainer"] h1,
+    [data-testid="stMarkdownContainer"] h2,
+    [data-testid="stMarkdownContainer"] h3,
+    [data-testid="stMarkdownContainer"] h4,
+    [data-testid="stMarkdownContainer"] h5,
+    [data-testid="stMarkdownContainer"] h6 {
+        font-family: 'EB Garamond', serif !important;
+        font-weight: 600 !important;
+        color: #f7b8df !important;
+    }
+
+    /* Sidebar headings — white text on pink background */
+    section[data-testid="stSidebar"] h1,
+    section[data-testid="stSidebar"] h2,
+    section[data-testid="stSidebar"] h3,
+    section[data-testid="stSidebar"] h4,
+    section[data-testid="stSidebar"] h5,
+    section[data-testid="stSidebar"] h6 {
+        color: #ffffff !important;
+    }
+               
+    /* MARKDOWN BODY TEXT */
+    .stMarkdown, .stMarkdown p, .stMarkdown span,
+    .stMarkdown li, .stMarkdown div {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* SIDEBAR */
+    section[data-testid="stSidebar"] * {
+        font-family: 'EB Garamond', serif !important;
+    }
+            
+
+    /* BUTTONS (all variants) */
+    button, .stButton button, [data-testid="baseButton-secondary"], [data-testid="baseButton-primary"] {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* SLIDERS — labels, ticks, values */
+    [data-testid="stSlider"] * {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* INPUTS */
+    input, textarea, select, option {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* TEXT INPUT WRAPPERS */
+    .stTextInput input, .stTextArea textarea {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* SELECTBOX */
+    .stSelectbox div, .stSelectbox label {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+    /* CHECKBOX + RADIO */
+    label, .stCheckbox, .stRadio {
+        font-family: 'EB Garamond', serif !important;
+    }
+
+</style>
+""", unsafe_allow_html=True)
+
 import numpy as np
 import os 
 
@@ -11,6 +115,8 @@ from modules.core.unit_manager import UnitManager
 from modules.core.section_utils import resolve_unit_at_point, get_unit_color_map
 from modules.visualisation.section_renderer import generate_grid, slice_at_z, plot_horizontal_section
 from modules.visualisation.borehole_renderer import generate_borehole_log, plot_borehole_log
+
+
 
 
 # -------------------------------
@@ -27,10 +133,10 @@ if "region_bounds" not in st.session_state:
 # Page setup
 # -------------------------------
 st.set_page_config(layout="wide")
-st.image("images/snowdon.jpeg", use_column_width=True)
+st.image("images/banner.png", width=1400)
 
-st.title("StratiMap Version 1.1.4")
-st.markdown("Created by C.J. McAteer 2025")
+st.title("StratiMap: Geological Visulation")
+st.subheader("Created by Connor McAteer")
 
 # -------------------------------
 # Sidebar styling
@@ -38,10 +144,33 @@ st.markdown("Created by C.J. McAteer 2025")
 st.markdown("""
     <style>
         [data-testid="stSidebar"] {
-            background-color: #ffd9f1;
+            background-color: #f7b8df;
         }
     </style>
 """, unsafe_allow_html=True)
+
+
+intro, motivation = st.columns(2)
+with intro:
+    st.subheader("Introduction")
+    st.markdown("Traditional subsurface interpretation from geological maps relies on geologists constructing cross sections inferred from the traces of units on surface topography.") 
+    st.markdown("These methods require expertise, take time, and remain inherently subjective. Cross sections also provide only partial insight: they reveal structure along specific lines but do not form a continuous 3D understanding of the subsurface.")
+    st.markdown("With vast archives of 2D geological maps already available, the challenge is how to extract consistent 3D structure from surface observations alone.")
+with motivation:
+    st.subheader("Motivation")
+
+    st.markdown("""
+    A better understanding of subsurface geology prior to invasive sampling is crucial for efficient mine planning and exploration.
+
+    By using adaptive machine learning to automate the production of 3D subsurface models, we bring:
+    - Scalability
+    - Speed
+    - Consistency and reproducibility.
+
+    These factors cut costs by reducing the need for new invasive sampling, instead aiming to better use the vast extent of existing data.
+    """)
+
+st.subheader("Region bounds")
 
 # -------------------------------
 # Region bounds (Snowdon defaults)
@@ -52,7 +181,7 @@ st.session_state.region_bounds = region_bounds
 # -------------------------------
 # Sidebar: Unit editing and creation
 # -------------------------------
-st.sidebar.header("Input new geological unit")
+st.sidebar.header("Geological Unit Editor")
 
 saved_units = st.session_state.unit_manager.get_units()
 unit_names = [unit["name"] for unit in saved_units]
@@ -178,6 +307,7 @@ API_KEY = "22010917bbd6f57d868e52ea3c8b4dbf"
 
 
 DEM_FILE = "dem.tif"
+st.subheader("Import and display topography")
 
 # Button 1: Fetch DEM
 if st.button("Fetch Topography"):
@@ -201,8 +331,10 @@ if st.button("Show Existing Topography"):
     else:
         st.warning("No DEM file found. Please fetch topography first.")
 
+st.subheader("Synthetic Geological Map")
+
 # Button 3: Generate DEM Section
-if st.button("Unit intersection with topography"):
+if st.button("Generate Synthetic Geological Map"):
     import numpy as np
     import rasterio
 
@@ -270,20 +402,21 @@ if st.button("Unit intersection with topography"):
     st.pyplot(fig)
 
 
-st.markdown("---")
-st.markdown(
-    """
-    "## Instructions
+from modules.visualisation.surface_renderer import build_unit_id_grid, plot_3d_surface
 
-    StratiMap is a tool currently capable of forward modelling the trace of geological units on topography maps. To create your own model, follow these steps:
-    1. **Define Region Bounds**: Use the region input controls to set the latitude, longitude, and altitude bounds for your area of interest.
-    2. **Input Geological Units**: In the sidebar, select lithology, color and structural parameters for each unit and then save your units.
-    3. **Section and Borehole tool**: Use these tools to view a horizontal slice or generate a synthetic borehole log through your model.
-    4. **Fetch Topography**: Use the 'Fetch Topography' button to download DEM data for your region.
-    5. **Show Existing Topography**: Load and visualize the DEM data as contours.
-    6. **Unit Intersection with Topography**: Generate a geological, showing your inputted units intersecting the topography.
+# if st.button("Show 3D Geological Surface"):
+#    if "dem" in st.session_state and "slice_points_dem" in st.session_state:
+#       dem = st.session_state["dem"]
+#       lons = st.session_state["lons"]
+#        lats = st.session_state["lats"]
+#        slice_points_dem = st.session_state["slice_points_dem"]
+#s
+#        ny, nx = dem.shape
+#        unit_id_grid, colorscale = build_unit_id_grid(slice_points_dem, nx, ny, units)
+#
+#        fig3d = plot_3d_surface(lons, lats, dem, unit_id_grid, colorscale)
+#        st.plotly_chart(fig3d, use_container_width=True)
+#    else:
+#        st.warning("Please load DEM and generate unit intersection first.")
 
-    Compare your model an existing geological map and try your best to reproduce the geology of the area.
-    
-    
-    """)
+
