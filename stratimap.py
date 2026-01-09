@@ -130,7 +130,7 @@ if "region_bounds" not in st.session_state:
 # -------------------------------
 # Page setup
 # -------------------------------
-st.set_page_config(layout="wide")
+st.set_page_config(layout="wide", page_icon="images/logo2.png", page_title="StratiMap: Geological Visualisation") 
 st.image("images/banner.png", width=1400)
 
 st.title("StratiMap: Geological Visulation")
